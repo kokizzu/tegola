@@ -32,6 +32,12 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	Port string
 
+	// SSLCert is a filepath to an SSL cert, this will be used to enable https
+	SSLCert string
+
+	// SSLKey is a filepath to an SSL key, this will be used to enable https
+	SSLKey string
+
 	// CORSAllowedOrigin is the "Access-Control-Allow-Origin" CORS header.
 	// configurable via the tegola config.toml file (set in main.go)
 	CORSAllowedOrigin string = "*"
@@ -73,9 +79,17 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	// notify the user the server is starting
 	log.Infof("starting tegola server on port %v", port)
 
-	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
-	go func() { log.Error(srv.ListenAndServe()) }()
+
+	// start our server
+	go func() {
+		if SSLCert+SSLKey != "" {
+			log.Error(srv.ListenAndServeTLS(SSLCert, SSLKey))
+		} else {
+			log.Error(srv.ListenAndServe())
+		}
+	}()
+
 	return srv
 }
 

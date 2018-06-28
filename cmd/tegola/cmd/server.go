@@ -6,6 +6,7 @@ import (
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 var (
@@ -40,6 +41,21 @@ var serverCmd = &cobra.Command{
 		// set tile buffer
 		if conf.TileBuffer > 0 {
 			server.TileBuffer = float64(conf.TileBuffer)
+		}
+
+		if conf.Webserver.SSLCert+conf.Webserver.SSLKey != "" {
+			if conf.Webserver.SSLCert == "" {
+				// error
+				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_cert")
+			}
+
+			if conf.Webserver.SSLKey == "" {
+				// error
+				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_key")
+			}
+
+			server.SSLCert = string(conf.Webserver.SSLCert)
+			server.SSLKey = string(conf.Webserver.SSLKey)
 		}
 
 		// start our webserver

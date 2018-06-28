@@ -37,6 +37,8 @@ type Webserver struct {
 	HostName          env.String `toml:"hostname"`
 	Port              env.String `toml:"port"`
 	CORSAllowedOrigin env.String `toml:"cors_allowed_origin"`
+	SSLCert env.String `toml:"ssl_cert"`
+	SSLKey env.String `toml:"ssl_key"`
 }
 
 // A Map represents a map in the Tegola Config file.
