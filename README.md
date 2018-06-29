@@ -106,6 +106,8 @@ Under the `maps` section, map layers are associated with data provider layers an
 ```toml
 [webserver]
 port = ":9090"              # port to bind the web server to. defaults ":8080"
+ssl_cert = "fullchain.pem"  # ssl cert for serving by https
+ssl_key = "privkey.pem"     # ssl key for serving by https
 
 [cache]                     # configure a tile cache
 type = "file"               # a file cache will cache to the local file system
