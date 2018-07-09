@@ -162,7 +162,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		server.Port = test.port
 
 		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-		router := server.NewRouter(nil)
+		router := server.NewRouter(nil, server.DefaultRouterConfig)
 
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {

@@ -133,9 +133,9 @@ func TestParse(t *testing.T) {
 				TileBuffer:   12,
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:          "cdn.tegola.io",
-					Port:              ":8080",
-					CORSAllowedOrigin: "tegola.io",
+					HostName:          env.StringPtr(env.String("cdn.tegola.io")),
+					Port:              env.StringPtr(env.String(":8080")),
+					CORSAllowedOrigin: env.StringPtr(env.String("tegola.io")),
 				},
 				Cache: env.Dict{
 					"type":     "file",
@@ -241,8 +241,8 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: ENV_TEST_HOST_CONCAT,
-					Port:     ENV_TEST_PORT,
+					HostName: env.StringPtr(env.String(ENV_TEST_HOST_CONCAT)),
+					Port:     env.StringPtr(env.String(ENV_TEST_PORT)),
 				},
 				Providers: []env.Dict{
 					{
@@ -344,7 +344,7 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port: env.StringPtr(env.String(":8080")),
 				},
 				Providers: []env.Dict{
 					{
@@ -478,7 +478,7 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port: env.StringPtr(env.String(":8080")),
 				},
 				Providers: []env.Dict{
 					{
@@ -561,7 +561,7 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port: env.StringPtr(env.String(":8080")),
 				},
 				Providers: []env.Dict{
 					{
@@ -630,7 +630,7 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port: env.StringPtr(env.String(":8080")),
 				},
 				Providers: []env.Dict{
 					{

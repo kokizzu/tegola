@@ -74,7 +74,7 @@ func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
 
 func doRequest(a *atlas.Atlas, method string, uri string, body io.Reader) (w *httptest.ResponseRecorder, router *httptreemux.TreeMux, err error) {
 
-	router = server.NewRouter(a)
+	router = server.NewRouter(a, server.DefaultRouterConfig)
 
 	// Default Method to GET
 	if method == "" {

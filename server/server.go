@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"crypto/tls"
 
 	"github.com/dimfeld/httptreemux"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/dict"
-	"crypto/tls"
+	"github.com/go-spatial/tegola/config"
+	"github.com/pkg/errors"
+	"github.com/go-spatial/tegola/internal/env"
 )
 
 const (
@@ -25,6 +27,10 @@ const (
 	configKeyPort = "port"
 	configKeySSLKey = "ssl_key"
 	configKeySSLCert = "ssl_cert"
+	configKeyHost = "host"
+	configKeyAddr = "addr"
+	configKeyCorsAllowedOrigin = "cors_allowed_origin"
+	configKeyTileBuffer = "tile_buffer"
 )
 
 var (
@@ -55,8 +61,19 @@ var (
 	TileBuffer float64 = tegola.DefaultTileBuffer
 )
 
+type RouterConfig struct {
+	TileBuffer float64
+	CORSAllowedOrigin string
+}
+
+var DefaultRouterConfig = RouterConfig{
+	TileBuffer: tegola.DefaultTileBuffer,
+	CORSAllowedOrigin: "*",
+}
+
 // NewRouter set's up the our routes.
-func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
+//TODO(@ear7h): H2 push middleware
+func NewRouter(a *atlas.Atlas, c RouterConfig) *httptreemux.TreeMux {
 	r := httptreemux.New()
 	group := r.NewGroup("/")
 
@@ -64,16 +81,16 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r.OptionsHandler = corsHandler
 
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}, c.CORSAllowedOrigin))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}, c.CORSAllowedOrigin))
 
 	// map tiles
-	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+	hMapLayerZXY := HandleMapLayerZXY{Atlas: a, tileBuffer: c.TileBuffer}
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY), c.CORSAllowedOrigin))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY), c.CORSAllowedOrigin))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}, c.CORSAllowedOrigin))
 
 	//	setup viewer routes, which can excluded via build flags
 	setupViewer(group)
@@ -81,32 +98,27 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	return r
 }
 
-func New(a *atlas.Atlas, c dict.Dicter) (srv *http.Server, err error) {
-	port := ":8080"
-	port, err = c.String(configKeyPort, &port)
-	if err != nil {
-		return nil, err
+func New(a *atlas.Atlas, c config.Webserver) (srv *http.Server, err error) {
+	srv = &http.Server{}
+
+	if c.HostName == nil {
+		c.HostName = env.StringPtr(env.String(""))
 	}
 
-	sslKey := ""
-	sslKey, err = c.String(configKeySSLKey, &sslKey)
-	if err != nil {
-		return nil, err
+	if c.Port == nil {
+		c.Port = env.StringPtr(env.String(":8080"))
 	}
 
-	sslCert := ""
-	sslCert, err = c.String(configKeySSLCert, &sslCert)
-	if err != nil {
-		return nil, err
+	srv.Addr = string(*c.HostName) + string(*c.Port)
+
+	if (c.SSLCert == nil) != (c.SSLKey == nil) {
+		return nil, errors.New("both or neither ssl_cert and ssl_key should be provided")
 	}
 
+	if c.SSLCert != nil {
+		sslKey := string(*c.SSLKey)
+		sslCert := string(*c.SSLCert)
 
-
-	srv = &http.Server{
-		Addr: port,
-	}
-
-	if sslCert + sslKey != "" {
 		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
 		if err != nil {
 			return nil, err
@@ -115,33 +127,46 @@ func New(a *atlas.Atlas, c dict.Dicter) (srv *http.Server, err error) {
 		srv.TLSConfig = &tls.Config{
 			Certificates: []tls.Certificate{cert},
 		}
-
 	}
 
-	srv.Handler = NewRouter(a)
+	if c.CORSAllowedOrigin == nil {
+		c.CORSAllowedOrigin = env.StringPtr("*")
+	}
+
+	if c.TileBuffer == nil {
+		c.TileBuffer = env.FloatPtr(tegola.DefaultTileBuffer)
+	}
+
+
+	routerConfig := RouterConfig{
+		CORSAllowedOrigin: string(*c.CORSAllowedOrigin),
+		TileBuffer: float64(*c.TileBuffer),
+	}
+
+	srv.Handler = NewRouter(a, routerConfig)
 
 	return srv, nil
 }
 
-// Start starts the tile server binding to the provided port
-func Start(a *atlas.Atlas, port string) *http.Server {
-
-	// notify the user the server is starting
-	log.Infof("starting tegola server on port %v", port)
-
-	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
-
-	// start our server
-	go func() {
-		if SSLCert+SSLKey != "" {
-			log.Error(srv.ListenAndServeTLS(SSLCert, SSLKey))
-		} else {
-			log.Error(srv.ListenAndServe())
-		}
-	}()
-
-	return srv
-}
+//// Start starts the tile server binding to the provided port
+//func Start(a *atlas.Atlas, port string) *http.Server {
+//
+//	// notify the user the server is starting
+//	log.Infof("starting tegola server on port %v", port)
+//
+//	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
+//
+//	// start our server
+//	go func() {
+//		if SSLCert+SSLKey != "" {
+//			log.Error(srv.ListenAndServeTLS(SSLCert, SSLKey))
+//		} else {
+//			log.Error(srv.ListenAndServe())
+//		}
+//	}()
+//
+//	return srv
+//}
 
 // hostName determines the hostname:port to return based on the following hierarchy
 // - HostName / Port values as configured via the config file
