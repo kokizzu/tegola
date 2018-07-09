@@ -11,12 +11,20 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/dict"
+	"crypto/tls"
 )
 
 const (
 	// MaxTileSize is 500k. Currently just throws a warning when tile
 	// is larger than MaxTileSize
 	MaxTileSize = 500000
+)
+
+const (
+	configKeyPort = "port"
+	configKeySSLKey = "ssl_key"
+	configKeySSLCert = "ssl_cert"
 )
 
 var (
@@ -71,6 +79,48 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	setupViewer(group)
 
 	return r
+}
+
+func New(a *atlas.Atlas, c dict.Dicter) (srv *http.Server, err error) {
+	port := ":8080"
+	port, err = c.String(configKeyPort, &port)
+	if err != nil {
+		return nil, err
+	}
+
+	sslKey := ""
+	sslKey, err = c.String(configKeySSLKey, &sslKey)
+	if err != nil {
+		return nil, err
+	}
+
+	sslCert := ""
+	sslCert, err = c.String(configKeySSLCert, &sslCert)
+	if err != nil {
+		return nil, err
+	}
+
+
+
+	srv = &http.Server{
+		Addr: port,
+	}
+
+	if sslCert + sslKey != "" {
+		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
+		if err != nil {
+			return nil, err
+		}
+
+		srv.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+
+	}
+
+	srv.Handler = NewRouter(a)
+
+	return srv, nil
 }
 
 // Start starts the tile server binding to the provided port
