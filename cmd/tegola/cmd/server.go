@@ -7,12 +7,11 @@ import (
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/internal/env"
 )
 
-var (
-	serverPort      string
-	defaultHTTPPort = ":8080"
-)
+// set by command line flag
+var serverPort string
 
 var serverCmd = &cobra.Command{
 	Use:   "serve",
@@ -23,43 +22,19 @@ var serverCmd = &cobra.Command{
 		initConfig()
 		gdcmd.OnComplete(provider.Cleanup)
 
-		// check config for server port setting
-		// if you set the port via the comand line it will override the port setting in the config
-		if serverPort == defaultHTTPPort && conf.Webserver.Port != "" {
-			serverPort = string(conf.Webserver.Port)
+		if serverPort != "" {
+			conf.Webserver.Port = env.StringPtr(env.String(serverPort))
 		}
 
 		// set our server version
 		server.Version = Version
-		server.HostName = string(conf.Webserver.HostName)
-
-		// set the CORSAllowedOrigin if a value is provided
-		if conf.Webserver.CORSAllowedOrigin != "" {
-			server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
-		}
-
-		// set tile buffer
-		if conf.TileBuffer > 0 {
-			server.TileBuffer = float64(conf.TileBuffer)
-		}
-
-		if conf.Webserver.SSLCert+conf.Webserver.SSLKey != "" {
-			if conf.Webserver.SSLCert == "" {
-				// error
-				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_cert")
-			}
-
-			if conf.Webserver.SSLKey == "" {
-				// error
-				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_key")
-			}
-
-			server.SSLCert = string(conf.Webserver.SSLCert)
-			server.SSLKey = string(conf.Webserver.SSLKey)
-		}
 
 		// start our webserver
-		srv := server.Start(nil, serverPort)
+		srv, err := server.New(nil, conf.Webserver)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

@@ -13,6 +13,8 @@ import (
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/server"
+	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola"
 )
 
 // set at build time via the CI
@@ -76,22 +78,23 @@ func main() {
 
 	// set our server version
 	server.Version = Version
-	if conf.Webserver.HostName != "" {
-		server.HostName = string(conf.Webserver.HostName)
+
+	if conf.Webserver.CORSAllowedOrigin == nil {
+		conf.Webserver.CORSAllowedOrigin = env.StringPtr("*")
 	}
 
-	// set the CORSAllowedOrigin if a value is provided
-	if conf.Webserver.CORSAllowedOrigin != "" {
-		server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
+	if conf.Webserver.TileBuffer == nil {
+		conf.Webserver.TileBuffer = env.FloatPtr(tegola.DefaultTileBuffer)
 	}
 
-	// set tile buffer
-	if conf.TileBuffer > 0 {
-		server.TileBuffer = float64(conf.TileBuffer)
+
+	routerConfig := server.RouterConfig{
+		CORSAllowedOrigin: string(*conf.Webserver.CORSAllowedOrigin),
+		TileBuffer: float64(*conf.Webserver.TileBuffer),
 	}
 
 	// http route setup
-	mux := server.NewRouter(nil)
+	mux := server.NewRouter(nil, routerConfig)
 
 	// the second argument here tells algnhasa to watch for "application/x-protobuf" Content-Type headers
 	// if it detects this in the response the payload will be base64 encoded. Lambda needs to be configured
