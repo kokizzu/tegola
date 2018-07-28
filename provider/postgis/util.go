@@ -39,13 +39,10 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 	}
 
 	var fgeom int = -1
-	var fgid bool
+
 	for i, f := range flds {
 		if f == `"`+l.geomField+`"` {
 			fgeom = i
-		}
-		if f == `"`+l.idField+`"` {
-			fgid = true
 		}
 	}
 
@@ -57,9 +54,8 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField)
 	}
 
-	if !fgid {
-		flds = append(flds, fmt.Sprintf(`"%v"`, l.idField))
-	}
+	// add required id field
+	flds = append(flds, fmt.Sprintf(`"%v"`, l.idField))
 
 	selectClause := strings.Join(flds, ", ")
 
@@ -163,6 +159,8 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 		}
 
 		desc := descriptions[i]
+		// the id has to be parsed once but it can also be a tag
+		var idParsed bool
 
 		switch desc.Name {
 		case geoFieldname:
@@ -170,7 +168,15 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes.", geoFieldname)
 			}
 		case idFieldname:
-			gid, err = gId(values[i])
+			// the id has to be parsed once but it can also be a tag
+			if !idParsed {
+				gid, err = gId(values[i])
+				idParsed = true
+				break
+			}
+
+			// adds id as a tag
+			fallthrough
 		default:
 			switch vex := values[i].(type) {
 			case map[string]pgtype.Text:
