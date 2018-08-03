@@ -13,7 +13,6 @@ import (
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
@@ -194,13 +193,15 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	return dx, dy
 }
 
-func (c *cursor) scalept(g tegola.Point) basic.Point {
-	pt, err := c.tile.ToPixel(tegola.WebMercator, [2]float64{g.X(), g.Y()})
+func (c *cursor) projectPoint(g [2]float64) [2]float64 {
+	pt, err := c.tile.ToPixel(tegola.WebMercator, g)
 	if err != nil {
 		panic(err)
 	}
-	return basic.Point{pt[0], pt[1]}
+	return pt
 }
+
+func (c *cursor) scalept(g tegola.Point) basic.Point { return c.projectPoint([2]float64{g.X(), g.Y()}) }
 
 func chk3Pts(pt1, pt2, pt3 basic.Point) int {
 	// If the first and third points are equal we only care about
@@ -270,6 +271,7 @@ Restart:
 	return newline
 }
 
+/*
 func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 	if pts[0] == pts[len(pts)-1] {
 		pts = pts[1:]
@@ -291,118 +293,6 @@ func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 		}
 	}
 	return pnts
-}
-
-/*
-func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
-	line := basic.CloneLine(g)
-	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
-		return line
-	}
-	pts := line.AsPts()
-	pts = maths.DouglasPeucker(pts, tolerance, true)
-	if len(pts) == 0 {
-		return nil
-	}
-	return basic.NewLineTruncatedFromPt(pts...)
-}
-
-func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.Polygon {
-
-	lines := g.Sublines()
-	if len(lines) <= 0 {
-		return nil
-	}
-
-	var poly basic.Polygon
-	sqTolerance := tolerance * tolerance
-	// First lets look the first line, then we will simplify the other lines.
-	for i := range lines {
-		area := maths.AreaOfPolygonLineString(lines[i])
-		l := basic.CloneLine(lines[i])
-
-		if area < sqTolerance {
-			if i == 0 {
-				return basic.ClonePolygon(g)
-			}
-			// don't simplify the internal line
-			poly = append(poly, l)
-			continue
-		}
-
-		pts := l.AsPts()
-		if len(pts) <= 2 {
-			if i == 0 {
-				return nil
-			}
-			continue
-		}
-		pts = normalizePoints(pts)
-		// If the last point is the same as the first, remove the first point.
-		if len(pts) <= 4 {
-			if i == 0 {
-				return basic.ClonePolygon(g)
-			}
-			poly = append(poly, l)
-			continue
-		}
-
-		pts = maths.DouglasPeucker(pts, sqTolerance, simplify)
-		if len(pts) <= 2 {
-			if i == 0 {
-				return nil
-			}
-			//log.Println("\t Skipping polygon subline.")
-			continue
-		}
-
-		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
-	}
-
-	if len(poly) == 0 {
-		return nil
-	}
-
-	return poly
-}
-
-func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegola.Geometry {
-	if !simplify || g == nil {
-		return g
-	}
-	switch gg := g.(type) {
-	case tegola.Polygon:
-		return simplifyPolygon(gg, tolerance, simplify)
-	case tegola.MultiPolygon:
-		var newMP basic.MultiPolygon
-		for _, p := range gg.Polygons() {
-			sp := simplifyPolygon(p, tolerance, simplify)
-			if sp == nil {
-				continue
-			}
-			newMP = append(newMP, sp)
-		}
-		if len(newMP) == 0 {
-			return nil
-		}
-		return newMP
-	case tegola.LineString:
-		return simplifyLineString(gg, tolerance)
-	case tegola.MultiLine:
-		var newML basic.MultiLine
-		for _, l := range gg.Lines() {
-			sl := simplifyLineString(l, tolerance)
-			if sl == nil {
-				continue
-			}
-			newML = append(newML, sl)
-		}
-		if len(newML) == 0 {
-			return nil
-		}
-		return newML
-	}
-	return g
 }
 */
 
@@ -583,10 +473,9 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	c.DisableScaling = true
 
 	// Project Geom
+	geometry = c.ScaleGeo(geometry)
 
 	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
-
-	geo := c.ScaleGeo(geometry)
 
 	pbb, err := tile.PixelBufferedBounds()
 	if err != nil {
@@ -594,7 +483,7 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	}
 	ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
-	geometry, err = CleanSimplifyGeometry(ctx, geo, ext, tile.ZEpislon(), simplify)
+	geometry, err = CleanSimplifyGeometry(ctx, geometry, ext, tile.ZEpislon(), simplify)
 
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
@@ -602,6 +491,7 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	if geometry == nil {
 		return []uint32{}, -1, nil
 	}
+
 	switch t := geometry.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)

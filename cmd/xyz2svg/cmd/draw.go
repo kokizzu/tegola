@@ -159,24 +159,41 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			count++
 			cursor := mvt.NewCursor(ttile)
 
-			geometry, err := convert.ToTegola(f.Geometry)
+			// Scale
+			g, err := cursor.ProjectGeometry(f.Geometry)
+			if err != nil {
+				return err
+			}
+			tg, err := convert.ToTegola(g)
 			if err != nil {
 				return err
 			}
 
-			// Scale
-			g := cursor.ScaleGeo(geometry)
-
 			// Simplify
-			sg := mvt.SimplifyGeometry(g, ttile.ZEpislon(), true)
+			sg, err := mvt.SimplifyGeometryGeom(ctx, g, ttile.ZEpislon())
+			if err != nil {
+				return err
+			}
+			tsg, err := convert.ToTegola(sg)
+			if err != nil {
+				return err
+			}
+
 			pbb, err := ttile.PixelBufferedBounds()
 			if err != nil {
 				return err
 			}
-
 			// Clip and validate
 			ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
-			vg, err := validate.CleanGeometry(ctx, sg, ext)
+			vg, err := validate.CleanGeometryGeom(ctx, sg, ext)
+			if err != nil {
+				return err
+			}
+
+			tvg, err := convert.ToTegola(vg)
+			if err != nil {
+				return err
+			}
 
 			// Draw each of the steps.
 			ffname, file, err := dfn.createFile(pname, name, gid, count)
@@ -187,7 +204,7 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 
 			log.Printf("Writing to file: %v\n", ffname)
 			mm := svg.MinMax{0, 0, 4096, 4096}
-			mm.OfGeometry(g)
+			mm.OfGeometry(tg)
 			canvas := &svg.Canvas{
 				Board:  mm,
 				Region: svg.MinMax{0, 0, 4096, 4096},
@@ -199,13 +216,13 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			canvas.Commentf("MinMax: %v\n", mm)
 
 			log.Println("\tDrawing original version.")
-			canvas.DrawGeometry(g, fmt.Sprintf("%v_scaled", gid), "fill-rule:evenodd; fill:yellow;opacity:1", "fill:black", false)
+			canvas.DrawGeometry(tg, fmt.Sprintf("%v_scaled", gid), "fill-rule:evenodd; fill:yellow;opacity:1", "fill:black", false)
 
 			log.Println("\tDrawing simplified version.")
-			canvas.DrawGeometry(sg, fmt.Sprintf("%v_simplifed", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+			canvas.DrawGeometry(tsg, fmt.Sprintf("%v_simplifed", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 
 			log.Println("\tDrawing clipped version.")
-			canvas.DrawGeometry(vg, fmt.Sprintf("clipped_%v", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+			canvas.DrawGeometry(tvg, fmt.Sprintf("clipped_%v", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 
 			// Flush the canvas.
 			canvas.End()
