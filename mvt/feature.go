@@ -14,7 +14,6 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/points"
-	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
@@ -271,19 +270,6 @@ Restart:
 	return newline
 }
 
-func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
-	line := basic.CloneLine(g)
-	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
-		return line
-	}
-	pts := line.AsPts()
-	pts = maths.DouglasPeucker(pts, tolerance, true)
-	if len(pts) == 0 {
-		return nil
-	}
-	return basic.NewLineTruncatedFromPt(pts...)
-}
-
 func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 	if pts[0] == pts[len(pts)-1] {
 		pts = pts[1:]
@@ -305,6 +291,20 @@ func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 		}
 	}
 	return pnts
+}
+
+/*
+func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
+	line := basic.CloneLine(g)
+	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
+		return line
+	}
+	pts := line.AsPts()
+	pts = maths.DouglasPeucker(pts, tolerance, true)
+	if len(pts) == 0 {
+		return nil
+	}
+	return basic.NewLineTruncatedFromPt(pts...)
 }
 
 func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.Polygon {
@@ -404,6 +404,7 @@ func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegol
 	}
 	return g
 }
+*/
 
 func (c *cursor) scalelinestr(g tegola.LineString) (ls basic.Line) {
 
@@ -586,7 +587,6 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
 
 	geo := c.ScaleGeo(geometry)
-	sg := SimplifyGeometry(geo, tile.ZEpislon(), simplify)
 
 	pbb, err := tile.PixelBufferedBounds()
 	if err != nil {
@@ -594,7 +594,8 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	}
 	ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
-	geometry, err = validate.CleanGeometry(ctx, sg, ext)
+	geometry, err = CleanSimplifyGeometry(ctx, geo, ext, tile.ZEpislon(), simplify)
+
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}

@@ -125,6 +125,17 @@ func toBasic(g geom.Geometry) basic.Geometry {
 			plg[i] = toBasicLine(geo[i])
 		}
 		return plg
+	case *geom.Polygon:
+		if geo == nil {
+			return basic.MultiPolygon{}
+		}
+		ggeo := *geo
+		plg := make(basic.Polygon, len(ggeo))
+		for i := range ggeo {
+			plg[i] = toBasicLine(ggeo[i])
+		}
+		return plg
+
 	case geom.MultiPolygon:
 		mplg := make(basic.MultiPolygon, len(geo))
 		for i := range geo {
@@ -134,6 +145,20 @@ func toBasic(g geom.Geometry) basic.Geometry {
 			}
 		}
 		return mplg
+	case *geom.MultiPolygon:
+		if geo == nil {
+			return basic.MultiPolygon{}
+		}
+		ggeo := *geo
+		mplg := make(basic.MultiPolygon, len(ggeo))
+		for i := range ggeo {
+			mplg[i] = make(basic.Polygon, len(ggeo[i]))
+			for j := range ggeo[i] {
+				mplg[i][j] = toBasicLine(ggeo[i][j])
+			}
+		}
+		return mplg
+
 	case geom.Collection:
 		geometries := geo.Geometries()
 		bc := make(basic.Collection, len(geometries))
