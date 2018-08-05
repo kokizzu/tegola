@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-const debug = false
-
 var (
 	simplifyGeometries    = true
 	simplificationMaxZoom = 10

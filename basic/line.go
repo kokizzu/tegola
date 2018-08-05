@@ -25,14 +25,6 @@ func (l Line) AsPts() []maths.Pt {
 	return line
 }
 
-// TODO: gdey remove this function when we have moved over to geomLinestring.
-func (l Line) AsGeomLineString() (ln [][2]float64) {
-	for i := range l {
-		ln = append(ln, [2]float64{l[i].X(), l[i].Y()})
-	}
-	return ln
-}
-
 // Contains tells you weather the given point is contained by the Linestring.
 // This assumes the linestring is a connected linestring.
 func (l Line) Contains(pt Point) bool {
@@ -75,37 +67,6 @@ func NewLine(pointPairs ...float64) Line {
 	return line
 }
 
-func NewLineFromPt(points ...maths.Pt) Line {
-	var line Line
-	for _, p := range points {
-		line = append(line, Point{p.X, p.Y})
-	}
-	return line
-}
-func NewLineTruncatedFromPt(points ...maths.Pt) Line {
-	var line Line
-	for _, p := range points {
-		line = append(line, Point{float64(int64(p.X)), float64(int64(p.Y))})
-	}
-	return line
-}
-
-func NewLineFromSubPoints(points ...tegola.Point) (l Line) {
-	l = make(Line, 0, len(points))
-	for i := range points {
-		l = append(l, Point{points[i].X(), points[i].Y()})
-	}
-	return l
-}
-
-func NewLineFrom2Float64(points ...[2]float64) (l Line) {
-	l = make(Line, 0, len(points))
-	for i := range points {
-		l = append(l, Point{points[i][0], points[i][1]})
-	}
-	return l
-}
-
 // Subpoints return the points in a line.
 func (l Line) Subpoints() (points []tegola.Point) {
 	points = make([]tegola.Point, 0, len(l))
@@ -117,13 +78,6 @@ func (l Line) Subpoints() (points []tegola.Point) {
 
 // MultiLine is a set of lines.
 type MultiLine []Line
-
-func NewMultiLine(pointPairLines ...[]float64) (ml MultiLine) {
-	for _, pp := range pointPairLines {
-		ml = append(ml, NewLine(pp...))
-	}
-	return ml
-}
 
 func (MultiLine) String() string { return "MultiLine" }
 

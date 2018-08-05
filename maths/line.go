@@ -11,33 +11,6 @@ func NewLine(x1, y1, x2, y2 float64) Line {
 	}
 }
 
-func NewLineFloat64(ln [2][2]float64) Line {
-	return Line{
-		Pt{ln[0][0], ln[0][1]},
-		Pt{ln[1][0], ln[1][1]},
-	}
-}
-func NewLinesFloat64(ln ...[2][2]float64) (lns []Line) {
-	for i := range ln {
-		lns = append(lns, Line{
-			Pt{ln[i][0][0], ln[i][0][1]},
-			Pt{ln[i][1][0], ln[i][1][1]},
-		})
-	}
-	return lns
-}
-
-// NewLineWith2Float64 is a transistional function till I have had a change to move
-// over the geom package and covert the maths functions to use it or they have migrated over
-// to it.
-// TODO: gdey – remove this function one the transition is over.
-func NewLineWith2Float64(ln [2][2]float64) Line {
-	return Line{
-		Pt{ln[0][0], ln[0][1]},
-		Pt{ln[1][0], ln[1][1]},
-	}
-}
-
 // InBetween will check to see if the given point lies on the line provided between the endpoints.
 func (l Line) InBetween(pt Pt) bool {
 	lx, gx := l[0].X, l[1].X
@@ -108,36 +81,6 @@ func (l Line) Clamp(pt Pt) (p Pt) {
 	return p
 }
 
-//InsideEx will return true if the given point is consider to be on the inside of the line, for the given winding order. The inside region excludes the line.
-// For clockwise the inside edge for a line heading in the upward direction is any point to the right of the line.
-// For clockwise the inside edge for a line heading in the downward direction is any point to the left of the line.
-// For clockwise the inside edge for a line heading in the rightward direction is any point to the bottom of the line.
-// For clockwise the inside edge for a line heading in the leftward direction is any point above the line.
-/*
-func (l Line) InsideEx(w WindingOrder, pt  Pt) bool {
-insideX, insideY := true, true
-clockwise = w.IsClockwise()
-	deltaX := l[1].X - l[0].X
-	deltaY := l[1].Y - l[0].Y
-
-	// Dealing with a horizontal line.
-	if deltaX == 0 {
-	     ptDelta := l[0].X - pt.X
-	     if clockwise {
-
-	     }
-	}
-
-
-
-	switch {
-	case w.IsClockwise() && deltaX > 0: // right ward.
-		goody =
-
-	}
-
-}
-*/
 // DistanceFromPoint will return the perpendicular distance from the point.
 func (l Line) DistanceFromPoint(pt Pt) float64 {
 
@@ -179,20 +122,3 @@ func (l Line) DeltaY() float64 { return l[1].Y - l[0].Y }
 func (l Line) IsLeft(pt Pt) float64 {
 	return (l.DeltaX() * (pt.Y - l[0].Y)) - ((pt.X - l[0].X) * l.DeltaY())
 }
-
-// LeftRightMostPt returns the left and right most points of the vertexes of the line.
-func (l Line) LeftRightMostPts() (Pt, Pt) {
-	if XYOrder(l[0], l[1]) < 0 {
-		return l[0], l[1]
-	}
-	return l[1], l[0]
-}
-
-// LeftRightMostAsLine returns the left most and right most points as a line going from the left to the right.
-func (l1 Line) LeftRightMostAsLine() Line {
-	l, r := l1.LeftRightMostPts()
-	return Line{l, r}
-}
-
-// Ring defines a set of points that are all connected. The last point and the first point should not be duplicated.
-type Ring []Pt

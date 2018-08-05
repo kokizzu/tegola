@@ -132,7 +132,6 @@ func destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 			i++
 		}
 	}
-
 	return nsegs, nil
 }
 
@@ -267,7 +266,6 @@ func snapToGrid(tolerance float64, segments []geom.Line) []geom.Line {
 	for i := range idxs {
 		segs[i] = segments[idxs[i]]
 	}
-
 	return segs
 }
 
@@ -326,7 +324,6 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 			}
 			return gg, true, nil
 		}
-
 		return geo, false, nil
 	case geom.Polygoner:
 		if debug {
@@ -340,7 +337,6 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 		if debug {
 			log.Printf("Returning on Polygon: %T", vmp)
 		}
-
 		return vmp, true, nil
 	case geom.MultiPolygoner:
 		if debug {
@@ -354,12 +350,10 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 		if debug {
 			log.Printf("Returning on MultiPolygon: %T", vmp)
 		}
-
 		return vmp, true, nil
 	}
 	if debug {
 		log.Printf("Got an unknown geometry %T", geo)
 	}
-
 	return nil, false, geom.ErrUnknownGeometry{geo}
 }

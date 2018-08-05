@@ -16,12 +16,11 @@ func (l Line) IsValid() bool {
 	for _, pt := range l {
 		// The map contains the point. Which means the point is duplicated.
 		if _, ok := seen[pt.String()]; ok {
-			//log.Println("Saw point:", pt)
 			return false
 		}
 	}
+
 	// We need to loop through the pair of points to see if they intersect.
-	//log.Printf("Line: %#v", l)
 	pt0 := l[len(l)-1]
 	endj := len(l) - 1
 	for i, pt1 := range l[:len(l)-2] {
@@ -46,6 +45,7 @@ func (l Line) IsValid() bool {
 		pt0 = pt1
 		endj = len(l)
 	}
+
 	return true
 }
 
@@ -55,21 +55,20 @@ func (p Polygon) IsValid() bool {
 	if len(p) == 0 {
 		return false
 	}
-	/*
-	   A Polygon is valid if the first linestring is clockwise and
-	*/
+
+	// A Polygon is valid if the first linestring is clockwise and
 	if !(p[0].IsValid() && p[0].Direction() == maths.Clockwise) {
 		log.Println("Line 0", p[0].IsValid(), p[0].Direction())
 		return false
 	}
-	/*
-	   all other linestrings are counter-clockwise and contained by
-	   the first linestring.
-	*/
+
+	// all other linestrings are counter-clockwise and contained by
+	// the first linestring.
 	for _, l := range p[1:] {
 		if !(l.IsValid() && l.Direction() == maths.CounterClockwise && p[0].ContainsLine(l)) {
 			return false
 		}
 	}
+
 	return true
 }

@@ -4,12 +4,14 @@ import (
 	"context"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/planar"
+	"github.com/go-spatial/geom/planar/simplify"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/validate"
 )
 
-func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, tolerance float64, simplify bool) (geo tegola.Geometry, err error) {
+func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, tolerance float64, simplifyGeom bool) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
@@ -23,8 +25,12 @@ func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.
 		return nil, nil
 	}
 
-	if simplify {
-		geomg, err = SimplifyGeometryGeom(ctx, geomg, tolerance)
+	if simplifyGeom {
+		dp := simplify.DouglasPeucker{
+			Tolerance: tolerance,
+		}
+
+		geomg, err = planar.Simplify(ctx, dp, g)
 		if err != nil {
 			return nil, err
 		}

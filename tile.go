@@ -17,7 +17,7 @@ const (
 
 var UnknownConversionError = fmt.Errorf("do not know how to convert value to requested value")
 
-//Tile slippy map tilenames
+// Tile slippy map tilenames
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
 	Z         uint

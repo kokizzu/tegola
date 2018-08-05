@@ -73,21 +73,3 @@ func (v MultiPoint) Points() (points []tegola.Point) {
 	}
 	return points
 }
-
-// MultiPoint3 describes a simple set of 3d points
-type MultiPoint3 []Point3
-
-// Just to make basic collection only usable with basic types.
-func (MultiPoint3) basicType() {}
-
-// Points are the points that make up the set
-func (v MultiPoint3) Points() (points []tegola.Point) {
-	for i := range v {
-		points = append(points, v[i])
-	}
-	return points
-}
-
-func (MultiPoint3) String() string {
-	return "MultiPoint3"
-}

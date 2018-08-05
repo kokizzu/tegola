@@ -79,15 +79,6 @@ type Pointer interface {
 	Point() Pt
 }
 
-func NewPoints(f []float64) (pts []Pt, err error) {
-	if len(f)%2 != 0 {
-		return pts, errors.New("Expected even number of points.")
-	}
-	for x, y := 0, 1; y < len(f); x, y = x+2, y+2 {
-		pts = append(pts, Pt{f[x], f[y]})
-	}
-	return pts, nil
-}
 func NewSegments(f []float64) (lines []Line, err error) {
 	if len(f)%2 != 0 {
 		return lines, errors.New("Expected even number of points.")
@@ -99,54 +90,6 @@ func NewSegments(f []float64) (lines []Line, err error) {
 	}
 	return lines, nil
 }
-
-// AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula
-// (https://en.wikipedia.org/wiki/Shoelace_formula)
-func AreaOfPolygon(p tegola.Polygon) (area float64) {
-	sublines := p.Sublines()
-	if len(sublines) == 0 {
-		return 0
-	}
-	// Only care about the outer ring.
-	return AreaOfPolygonLineString(sublines[0])
-}
-
-func AreaOfPolygonLineString(line tegola.LineString) (area float64) {
-	// Only care about the outer ring.
-	points := line.Subpoints()
-
-	n := len(points)
-	for i := range points {
-		j := (i + 1) % n
-		area += points[i].X() * points[j].Y()
-		area -= points[j].X() * points[i].Y()
-	}
-	return math.Abs(area) / 2.0
-}
-
-func AreaOfRing(points ...Pt) (area float64) {
-	n := len(points)
-	for i := range points {
-		j := (i + 1) % n
-		area += points[i].X * points[j].Y
-		area -= points[j].X * points[i].Y
-	}
-	return math.Abs(area) / 2.0
-}
-
-// DistOfLine will calculate the Manhattan distance of a line.
-func DistOfLine(l tegola.LineString) (dist float64) {
-	points := l.Subpoints()
-	if len(points) == 0 {
-		return 0
-	}
-	for i, j := 0, 1; j < len(points); i, j = i+1, j+1 {
-		dist += math.Abs(points[j].X()-points[i].X()) + math.Abs(points[j].Y()-points[i].Y())
-	}
-	return dist
-}
-
-// DistOfLine will calculate the
 
 func RadToDeg(rad float64) float64 {
 	return rad * Rad2Deg
@@ -277,48 +220,6 @@ func Contains(subject []float64, pt Pt) (bool, error) {
 	return count%2 != 0, nil
 }
 
-func XYOrder(pt1, pt2 Pt) int {
-
-	switch {
-
-	// Test the x-coord first
-	case pt1.X > pt2.X:
-		return 1
-	case pt1.X < pt2.X:
-		return -1
-
-		// Test the y-coord second
-	case pt1.Y > pt2.Y:
-		return 1
-	case pt1.Y < pt2.Y:
-		return -1
-
-	}
-
-	// when you exclude all other possibilities, what remains  is...
-	return 0 // they are the same point
-}
-
-func YXorder(pt1, pt2 Pt) int {
-
-	// Test the y-coord first
-	switch {
-	case pt1.Y > pt2.Y:
-		return 1
-	case pt1.Y < pt2.Y:
-		return -1
-
-		// Test the x-coord second
-	case pt1.X > pt2.X:
-		return 1
-	case pt1.X < pt2.X:
-		return -1
-	}
-
-	// when you exclude all other possibilities, what remains  is...
-	return 0 // they are the same point
-}
-
 // Powers of 2
 func Exp2(p uint64) uint64 {
 	// this mimics behavior from casting
@@ -331,6 +232,8 @@ func Exp2(p uint64) uint64 {
 
 // Minimum of uints
 func Min(x, y uint) uint {
-	if x < y {return x}
+	if x < y {
+		return x
+	}
 	return y
 }
