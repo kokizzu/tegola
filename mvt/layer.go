@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
-	"strings"
 
 	"context"
 
@@ -15,46 +11,19 @@ import (
 	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
-var simplifyGeometries = true
-var simplificationMaxZoom = 10
-
-func init() {
-	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
-	if strings.Contains(options, "dontsimplifygeo") {
-		simplifyGeometries = false
-		log.Println("Turning Off Simplification of Geometries.")
-	}
-	if strings.Contains(options, "simplifymaxzoom=") {
-		idx := strings.Index(options, "simplifymaxzoom=")
-		idx += 16
-		eidx := strings.IndexAny(options[idx:], ",.\t \n")
-
-		if eidx == -1 {
-			eidx = len(options)
-		} else {
-			eidx += idx
-		}
-		i, err := strconv.Atoi(options[idx:eidx])
-		if err != nil {
-			log.Printf("Did not under the value(%v) for SimplifyMaxZoom sticking with default (%v).", options[idx:eidx], simplificationMaxZoom)
-			return
-		}
-		simplificationMaxZoom = int(i + 1)
-		log.Printf("Setting SimplifyMaxZoom to %v", int(i))
-	}
-}
-
-// Layer describes a layer in the tile. Each layer can have multiple features
-// which describe drawing.
+// Layer describes a layer in a tile. Each layer can have multiple features.
 type Layer struct {
-	// This is the name of the feature, is has to be unique within a tile.
+	// The name of the layer. Must be unique within a tile
 	Name string
 	// The set of features
 	features []Feature
-	extent   *int // default is 4096
+	// Tile extent. Defaults to 4096
+	extent *int
 	// DontSimplify truns off simplification for this layer.
 	DontSimplify bool
-	// MaxSimplificationZoom is the zoom level at which point simplification is turned off. if value is zero Max is set to 14. If you do not want to simplify at any level set DontSimplify to true.
+	// MaxSimplificationZoom is the zoom level at which point simplification is turned off.
+	// if value is 0, MaxSimplificationZoom is set to 14.
+	// To turn off simplification set DontSimplify to true.
 	MaxSimplificationZoom uint
 }
 
@@ -62,6 +31,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 	for _, v := range valMap {
 		vt = append(vt, vectorTileValue(v))
 	}
+
 	return vt
 }
 
@@ -71,12 +41,14 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 	if err != nil {
 		return nil, err
 	}
+
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+
 		simplify := simplifyGeometries && !l.DontSimplify
 		if l.MaxSimplificationZoom == 0 {
 			l.MaxSimplificationZoom = uint(simplificationMaxZoom)
@@ -90,13 +62,14 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 			case context.Canceled:
 				return nil, err
 			default:
-				return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
+				return nil, fmt.Errorf("error getting VTileFeature: %v", err)
 			}
 		}
 		if vtf != nil {
 			features = append(features, vtf)
 		}
 	}
+
 	ext := uint32(tile.Extent)
 	version := uint32(l.Version())
 	vtl := new(vectorTile.Tile_Layer)
@@ -107,10 +80,11 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 	vtl.Keys = kmap
 	vtl.Values = valmap
 	vtl.Extent = &ext
+
 	return vtl, nil
 }
 
-//Version is the version of tile spec this layer is from.
+// Version is the version of tile spec this layer is from.
 func (*Layer) Version() int { return 2 }
 
 // Extent defaults to 4096
@@ -118,6 +92,7 @@ func (l *Layer) Extent() int {
 	if l == nil || l.extent == nil {
 		return 4096
 	}
+
 	return *(l.extent)
 }
 
@@ -126,6 +101,7 @@ func (l *Layer) SetExtent(e int) {
 	if l == nil {
 		l = new(Layer)
 	}
+
 	l.extent = &e
 }
 
@@ -135,18 +111,20 @@ func (l *Layer) Features() (f []Feature) {
 	if l == nil || l.features == nil {
 		return nil
 	}
+
 	f = append(f, l.features...)
+
 	return f
 }
 
-//AddFeatures will add one or more Features to the Layer, if a features ID is a the same as
-//Any already in the Layer, it will ignore those features.
-//If the id fields is nil, the feature will always be added.
+// AddFeatures will add one or more Features to the Layer, if a features ID is a the same as
+// Any already in the Layer, it will ignore those features.
+// If the id fields is nil, the feature will always be added.
 func (l *Layer) AddFeatures(features ...Feature) (skipped bool) {
-
 	b := make([]Feature, len(l.features), len(l.features)+len(features))
 	copy(b, l.features)
 	l.features = b
+
 FEATURES_LOOP:
 	for _, f := range features {
 		if f.ID == nil {
@@ -166,11 +144,12 @@ FEATURES_LOOP:
 		// There were no matches, let's add it to our list.
 		l.features = append(l.features, f)
 	}
+
 	return skipped
 }
 
-//RemoveFeature allows you to remove one or more features, with the provided indexes.
-//To figure out the indexes, use the indexs from the Features array.
+// RemoveFeature allows you to remove one or more features, with the provided indexes.
+// To figure out the indexes, use the indexs from the Features array.
 func (l *Layer) RemoveFeature(idxs ...int) {
 	var features = make([]Feature, 0, len(l.features))
 SKIP:
@@ -187,14 +166,6 @@ SKIP:
 func vectorTileValue(i interface{}) *vectorTile.Tile_Value {
 	tv := new(vectorTile.Tile_Value)
 	switch t := i.(type) {
-	default:
-		buff := new(bytes.Buffer)
-		err := binary.Write(buff, binary.BigEndian, t)
-		// We are going to ignore the value and return an empty TileValue
-		if err == nil {
-			tv.XXX_unrecognized = buff.Bytes()
-		}
-
 	case string:
 		tv.StringValue = &t
 
@@ -240,7 +211,14 @@ func vectorTileValue(i interface{}) *vectorTile.Tile_Value {
 
 	case float64:
 		tv.DoubleValue = &t
+	default:
+		buff := new(bytes.Buffer)
+		err := binary.Write(buff, binary.BigEndian, t)
+		// we are going to ignore the value and return an empty TileValue
+		if err == nil {
+			tv.XXX_unrecognized = buff.Bytes()
+		}
+	}
 
-	} // switch
 	return tv
 }

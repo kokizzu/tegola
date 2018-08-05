@@ -1,20 +1,25 @@
 package convert
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 )
 
-var ErrUnknownGeometry = errors.New("Unknown Geometry")
+type ErrUnknownGeometryType struct {
+	Geom interface{}
+}
+
+func (e ErrUnknownGeometryType) Error() string {
+	return fmt.Sprintf("unknown geometry type: %T", e.Geom)
+}
 
 func ToGeom(g tegola.Geometry) (geom.Geometry, error) {
 	switch geo := g.(type) {
 	default:
-		return nil, ErrUnknownGeometry
-
+		return nil, ErrUnknownGeometryType{Geom: geo}
 	case tegola.Point:
 		return geom.Point{geo.X(), geo.Y()}, nil
 	case tegola.MultiPoint:
@@ -92,49 +97,54 @@ func toBasicLine(g geom.LineString) basic.Line {
 	for i := range g {
 		l[i] = basic.Point(g[i])
 	}
+
 	return l
 }
 
-func toBasic(g geom.Geometry) basic.Geometry {
+func toBasic(g geom.Geometry) (basic.Geometry, error) {
 	switch geo := g.(type) {
-	default:
-		return nil
-
 	case geom.Point:
-		return basic.Point(geo)
+		return basic.Point(geo), nil
 
 	case geom.MultiPoint:
 		mp := make(basic.MultiPoint, len(geo))
 		for i := range geo {
 			mp[i] = basic.Point(geo[i])
 		}
-		return mp
+
+		return mp, nil
 
 	case geom.LineString:
-		return toBasicLine(geo)
+		return toBasicLine(geo), nil
 
 	case geom.MultiLineString:
 		ml := make(basic.MultiLine, len(geo))
 		for i := range geo {
 			ml[i] = toBasicLine(geo[i])
 		}
-		return ml
+
+		return ml, nil
+
 	case geom.Polygon:
 		plg := make(basic.Polygon, len(geo))
 		for i := range geo {
 			plg[i] = toBasicLine(geo[i])
 		}
-		return plg
+
+		return plg, nil
+
 	case *geom.Polygon:
 		if geo == nil {
-			return basic.MultiPolygon{}
+			return basic.MultiPolygon{}, nil
 		}
+
 		ggeo := *geo
 		plg := make(basic.Polygon, len(ggeo))
 		for i := range ggeo {
 			plg[i] = toBasicLine(ggeo[i])
 		}
-		return plg
+
+		return plg, nil
 
 	case geom.MultiPolygon:
 		mplg := make(basic.MultiPolygon, len(geo))
@@ -144,11 +154,14 @@ func toBasic(g geom.Geometry) basic.Geometry {
 				mplg[i][j] = toBasicLine(geo[i][j])
 			}
 		}
-		return mplg
+
+		return mplg, nil
+
 	case *geom.MultiPolygon:
 		if geo == nil {
-			return basic.MultiPolygon{}
+			return basic.MultiPolygon{}, nil
 		}
+
 		ggeo := *geo
 		mplg := make(basic.MultiPolygon, len(ggeo))
 		for i := range ggeo {
@@ -157,22 +170,29 @@ func toBasic(g geom.Geometry) basic.Geometry {
 				mplg[i][j] = toBasicLine(ggeo[i][j])
 			}
 		}
-		return mplg
+
+		return mplg, nil
 
 	case geom.Collection:
 		geometries := geo.Geometries()
 		bc := make(basic.Collection, len(geometries))
-		for i := range geometries {
-			bc[i] = toBasic(geometries[i])
-		}
-		return bc
-	}
 
-}
-func ToTegola(geom geom.Geometry) (tegola.Geometry, error) {
-	g := toBasic(geom)
-	if g == nil {
-		return g, ErrUnknownGeometry
+		for i := range geometries {
+			var err error
+
+			bc[i], err = toBasic(geometries[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return bc, nil
+
+	default:
+		return nil, ErrUnknownGeometryType{Geom: geo}
 	}
-	return g, nil
+}
+
+func ToTegola(geom geom.Geometry) (tegola.Geometry, error) {
+	return toBasic(geom)
 }

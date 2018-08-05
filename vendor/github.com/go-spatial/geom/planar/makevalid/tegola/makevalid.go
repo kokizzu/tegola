@@ -48,6 +48,7 @@ func asSegments(g geom.Geometry) (segs []geom.Line, err error) {
 		}
 		return segs, nil
 	}
+
 	return nil, errors.New("Unsupported")
 }
 
@@ -131,6 +132,7 @@ func destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 			i++
 		}
 	}
+
 	return nsegs, nil
 }
 
@@ -265,8 +267,8 @@ func snapToGrid(tolerance float64, segments []geom.Line) []geom.Line {
 	for i := range idxs {
 		segs[i] = segments[idxs[i]]
 	}
-	return segs
 
+	return segs
 }
 
 func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (*geom.MultiPolygon, error) {
@@ -312,13 +314,10 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	mplygs := geom.MultiPolygon(edix.MultiPolygon(ctx))
 
 	return &mplygs, nil
-
 }
 
 func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *geom.Extent) (geometry geom.Geometry, didClip bool, err error) {
-
 	switch g := geo.(type) {
-
 	case geom.LineStringer, geom.MultiLineStringer, geom.Pointer, geom.MultiPointer:
 		if mv.Clipper != nil {
 			gg, err := mv.Clipper.Clip(ctx, geo, clipbox)
@@ -327,6 +326,7 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 			}
 			return gg, true, nil
 		}
+
 		return geo, false, nil
 	case geom.Polygoner:
 		if debug {
@@ -340,6 +340,7 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 		if debug {
 			log.Printf("Returning on Polygon: %T", vmp)
 		}
+
 		return vmp, true, nil
 	case geom.MultiPolygoner:
 		if debug {
@@ -353,11 +354,12 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 		if debug {
 			log.Printf("Returning on MultiPolygon: %T", vmp)
 		}
+
 		return vmp, true, nil
 	}
 	if debug {
 		log.Printf("Got an unknown geometry %T", geo)
 	}
-	return nil, false, geom.ErrUnknownGeometry{geo}
 
+	return nil, false, geom.ErrUnknownGeometry{geo}
 }

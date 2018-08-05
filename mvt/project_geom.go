@@ -77,7 +77,6 @@ func (c *cursor) ProjectGeometry(geo geom.Geometry) (geom.Geometry, error) {
 		}
 		return geom.MultiPolygon(mmgg), nil
 	default:
-		return geo, ErrUnknownGeometryType
+		return geo, ErrUnknownGeometryType{Geom: g}
 	}
-
 }

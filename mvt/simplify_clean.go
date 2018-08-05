@@ -10,7 +10,6 @@ import (
 )
 
 func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, tolerance float64, simplify bool) (geo tegola.Geometry, err error) {
-
 	if g == nil {
 		return nil, nil
 	}
@@ -23,6 +22,7 @@ func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.
 	if g == nil {
 		return nil, nil
 	}
+
 	if simplify {
 		geomg, err = SimplifyGeometryGeom(ctx, geomg, tolerance)
 		if err != nil {
@@ -39,5 +39,4 @@ func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.
 	}
 
 	return convert.ToTegola(geomg)
-
 }
