@@ -17,6 +17,9 @@ func (e ErrUnknownGeometryType) Error() string {
 }
 
 func ToGeom(g tegola.Geometry) (geom.Geometry, error) {
+	if g == nil {
+		return nil, nil
+	}
 	switch geo := g.(type) {
 	default:
 		return nil, ErrUnknownGeometryType{Geom: geo}
@@ -102,6 +105,9 @@ func toBasicLine(g geom.LineString) basic.Line {
 }
 
 func toBasic(g geom.Geometry) (basic.Geometry, error) {
+	if g == nil {
+		return nil, nil
+	}
 	switch geo := g.(type) {
 	case geom.Point:
 		return basic.Point(geo), nil

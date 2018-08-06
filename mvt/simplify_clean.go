@@ -33,10 +33,10 @@ func CleanSimplifyGeometry(ctx context.Context, g tegola.Geometry, extent *geom.
 		}
 	}
 
-	geomg, err = validate.CleanGeometryGeom(ctx, geomg, extent)
+	geo, err = validate.CleanGeometryGeom(ctx, geomg, extent)
 	if err != nil {
 		return nil, err
 	}
 
-	return convert.ToTegola(geomg)
+	return convert.ToTegola(geo)
 }
