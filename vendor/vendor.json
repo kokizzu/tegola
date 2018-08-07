@@ -275,44 +275,44 @@
 		{
 			"checksumSHA1": "LwWvAgULJaYXJ0JeDT2aD5t+bjw=",
 			"path": "github.com/go-spatial/geom",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "zWw75ZVoW5Fn2zveCxA/ZC8rhh8=",
 			"path": "github.com/go-spatial/geom/cmp",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "nI30tAnIkEh8ljn+qYsgKmd440E=",
 			"path": "github.com/go-spatial/geom/encoding/wkb",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "cbxzkF7Qas08G7TBXkv5afpJmkY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/consts",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "FwWv3mHOHaWWmlD4A3S34boo2bY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/decode",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "52nmbyH1lTE1aJ/jNqOBFCOpazk=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/encode",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "U2JkAfWI5nBagnL/MjN2xCuifxk=",
 			"path": "github.com/go-spatial/geom/encoding/wkt",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "Sw0/bW1k07/34qq6JM8Drb6JhPc=",
@@ -323,62 +323,62 @@
 		{
 			"checksumSHA1": "dnySzIYXHWZxiPLIp/B97nsL6tU=",
 			"path": "github.com/go-spatial/geom/planar",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "C4EYOTl/Cmh8xCiVG9csNW4UnqA=",
 			"path": "github.com/go-spatial/geom/planar/clip",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "mBa3GgTvL9ksiV7EI9/aBaQo3vo=",
 			"path": "github.com/go-spatial/geom/planar/intersect",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "iwblklIpEMvmep6smfzAo706hqI=",
 			"path": "github.com/go-spatial/geom/planar/makevalid/hitmap",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
-			"checksumSHA1": "RbwC8r2r+YAAaxUmZ5Opahq4Xss=",
+			"checksumSHA1": "lwRmu3U9Uk/k1SuH0Oyz/0aLoEs=",
 			"path": "github.com/go-spatial/geom/planar/makevalid/tegola",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "udPvbrexZx4a2/RLr7kAWVx2u+M=",
 			"path": "github.com/go-spatial/geom/planar/simplify",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "q2EZHWNJ2CfNK8w7q7KtQVil9Js=",
 			"path": "github.com/go-spatial/geom/planar/triangulate",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "0f/CCoSldF9MdpwhMd5x8pYlD7M=",
 			"path": "github.com/go-spatial/geom/planar/triangulate/constraineddelaunay",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "QQvQR/cA03Dh4Xp9x8Ez1oVY2Zk=",
 			"path": "github.com/go-spatial/geom/planar/triangulate/quadedge",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "IOqvwFC+WfeiH2kqD0/0v1OyROI=",
 			"path": "github.com/go-spatial/geom/slippy",
-			"revision": "090d8525a1337c1f46086eb957f2a98aec8f5028",
-			"revisionTime": "2018-06-05T04:56:52Z"
+			"revision": "62800f6da5d4a8a0c45fcdf6d52ab7c927fab464",
+			"revisionTime": "2018-08-06T23:57:02Z"
 		},
 		{
 			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",
