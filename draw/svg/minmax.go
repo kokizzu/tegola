@@ -1,13 +1,24 @@
 package svg
 
 import (
+	"context"
 	"fmt"
+	"math"
 
-	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/geom"
 )
 
 type MinMax struct {
 	MinX, MinY, MaxX, MaxY int64
+}
+
+func NewMinMax() *MinMax {
+	return &MinMax{
+		MinX: math.MaxInt64,
+		MinY: math.MaxInt64,
+		MaxX: math.MinInt64,
+		MaxY: math.MinInt64,
+	}
 }
 
 func (mm MinMax) Min() (int64, int64) {
@@ -35,7 +46,7 @@ func (mm MinMax) SentinalPts() [][]int64 {
 func (mm *MinMax) MinMax(m1 *MinMax) *MinMax {
 
 	if mm == nil {
-		mm = &MinMax{}
+		mm = NewMinMax()
 	}
 
 	if m1 == nil {
@@ -60,40 +71,20 @@ func (mm *MinMax) MinMax(m1 *MinMax) *MinMax {
 func (mm *MinMax) Fn() *MinMax                        { return mm }
 func (mm *MinMax) MinMaxFn(fn func() *MinMax) *MinMax { return mm.MinMax(fn()) }
 func (mm *MinMax) MinMaxPt(x, y int64) *MinMax        { return mm.MinMax(&MinMax{x, y, x, y}) }
-func (mm *MinMax) OfGeometry(gs ...tegola.Geometry) *MinMax {
+func (mm *MinMax) MinMaxFPt(pt [2]float64) *MinMax    { return mm.MinMaxPt(int64(pt[0]), int64(pt[1])) }
+func (mm *MinMax) MinMaxOfPts(pts ...[2]float64) *MinMax {
+	for _, pt := range pts {
+		mm = mm.MinMaxFPt(pt)
+	}
+	return mm
+}
+func (mm *MinMax) OfGeometry(gs ...geom.Geometry) *MinMax {
+
 	for _, g := range gs {
-		switch geo := g.(type) {
-		case tegola.Point:
-			mm.MinMaxPt(int64(geo.X()), int64(geo.Y()))
-		case tegola.MultiPoint:
-			for _, pt := range geo.Points() {
-				mm.MinMaxPt(int64(pt.X()), int64(pt.Y()))
-			}
-		case tegola.LineString:
-			for _, pt := range geo.Subpoints() {
-				mm.MinMaxPt(int64(pt.X()), int64(pt.Y()))
-			}
-		case tegola.MultiLine:
-			for _, ln := range geo.Lines() {
-				for _, pt := range ln.Subpoints() {
-					mm.MinMaxPt(int64(pt.X()), int64(pt.Y()))
-				}
-			}
-		case tegola.Polygon:
-			for _, ln := range geo.Sublines() {
-				for _, pt := range ln.Subpoints() {
-					mm.MinMaxPt(int64(pt.X()), int64(pt.Y()))
-				}
-			}
-		case tegola.MultiPolygon:
-			for _, p := range geo.Polygons() {
-				for _, ln := range p.Sublines() {
-					for _, pt := range ln.Subpoints() {
-						mm.MinMaxPt(int64(pt.X()), int64(pt.Y()))
-					}
-				}
-			}
-		}
+		geom.WalkAllPoints(context.Background(), g, func(pt [2]float64) bool {
+			mm.MinMaxFPt(pt)
+			return true
+		})
 	}
 	return mm
 }

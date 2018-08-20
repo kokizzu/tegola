@@ -137,7 +137,7 @@ func (t *Tile) Bounds() [4]float64 {
 	return [4]float64{north, east, south, west}
 }
 
-func toWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
+func ToWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
 	switch srid {
 	default:
 		return npt, UnknownConversionError
@@ -152,7 +152,7 @@ func toWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
 	}
 }
 
-func fromWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
+func FromWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
 	switch srid {
 	default:
 		return npt, UnknownConversionError
@@ -168,7 +168,7 @@ func fromWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
 }
 
 func (t *Tile) ToPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
-	spt, err := toWebMercator(srid, pt)
+	spt, err := ToWebMercator(srid, pt)
 	if err != nil {
 		return npt, err
 	}
@@ -185,7 +185,7 @@ func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 
 	wmx := (x * t.xspan / t.Extent) + t.extent.MinX()
 	wmy := (y * t.yspan / t.Extent) + t.extent.MinY()
-	return fromWebMercator(srid, [2]float64{wmx, wmy})
+	return FromWebMercator(srid, [2]float64{wmx, wmy})
 
 }
 

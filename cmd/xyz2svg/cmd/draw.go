@@ -11,18 +11,56 @@ import (
 
 	"github.com/spf13/cobra"
 
+	svg "github.com/ajstarks/svgo"
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/planar"
+	"github.com/go-spatial/geom/planar/makevalid"
+	"github.com/go-spatial/geom/planar/makevalid/hitmap"
+	"github.com/go-spatial/geom/planar/makevalid/walker"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/draw/svg"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths/validate"
+	"github.com/go-spatial/tegola/draw/svg/plot"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 )
+
+const GridStyle = `
+g#grid {
+	stroke-width: 1px;
+	stroke: #e6f7ff;
+}
+g#grid line {
+	stroke-width: 1px;
+	stroke: #e6f7ff;
+}
+g#gridPoints circle {
+	fill: #e6f7ff;
+	stroke-width: 0px;
+	stroke: #e6f7ff;
+}
+g#grid text {
+	font:  200px helvetica; fill: #01AAF9;
+	alignment-baseline: middle;
+}
+
+g#ringPoints circle.constrained {
+	stroke:black;
+	stroke-width:3px;
+	fill: black;
+}
+g#ringPoints circle.unconstrained {
+	stroke:black;
+	stroke-width:3px;
+	fill: none;
+}
+
+#markerHalfTopArrow {
+	fill: gray;
+}
+`
 
 var drawCmd = &cobra.Command{
 	Use:   "draw",
@@ -138,101 +176,148 @@ func drawCommand(cmd *cobra.Command, args []string) {
 		} else {
 			layers = append(layers, lyr)
 		}
-		if err := drawFeatures(name, tiler, layers, gid, &dfn); err != nil {
-			panic(err)
+		slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
+		for _, layerName := range layers {
+
+			if err := tiler.TileFeatures(context.Background(),
+				layerName,
+				slippyTile,
+				dfn.DrawFeature(name, layerName, gid),
+			); err != nil {
+				panic(err)
+			}
 		}
 	}
 	provider.Cleanup()
 }
 
-func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
+func DrawParts(canvas *svg.SVG, clipbox *geom.Extent, ori, final geom.Geometry, outsideTriangles, insideTriangles []geom.Triangle) {
+
+	grid := plot.NewUniformGrid(canvas, clipbox.MinX(), clipbox.MinY(), 100, DrawingScale)
+	grid.Def(func() {
+		canvas.Style("text/css", GridStyle)
+		//grid.DrawGridAndAxis(clipbox.MinX(), clipbox.MinY(), clipbox.MaxX(), clipbox.MaxY(), true)
+	})
+	canvas.Use(0, 0, "grid")
+
+	grid.Gid("outside_triangles", func() {
+		for i, triangle := range outsideTriangles {
+			grid.Geometry(fmt.Sprintf("otri_%v", i), triangle, `style="fill: gray; stroke:black; stroke-width:1px"`)
+			cpt := geom.Point(triangle.Center())
+			grid.Geometry(fmt.Sprintf("otri_cpt_%v", i), cpt, `style="fill: white;stroke:white; stroke-width:6px"`)
+		}
+	})
+	grid.Gid("inside_triangles", func() {
+		for i, triangle := range insideTriangles {
+			grid.Geometry(fmt.Sprintf("itri_%v", i), triangle, `style="fill: green; stroke:black; stroke-width:6px"`)
+			cpt := geom.Point(triangle.Center())
+			grid.Geometry(fmt.Sprintf("itri_cpt_%v", i), cpt, `style="fill: white;stroke:white; stroke-width:6px"`)
+
+		}
+	})
+	grid.Geometry("clipbox", clipbox, `style="fill:red; fill-opacity:0.4; stroke:red; stroke-width:6px"`)
+	grid.Geometry("simplified_polygon", ori, `style="fill:yellow; fill-opacity:0.4"`)
+	grid.Geometry("generate_polygon", final, `style="fill:blue;fill-opacity:0.3"`)
+}
+
+func GetParts(clipbox *geom.Extent, geo geom.Geometry) (final geom.Geometry, outsideTriangles, insideTriangles []geom.Triangle, err error) {
+	var mply geom.MultiPolygon
 	ctx := context.Background()
+
+	hm := hitmap.MustNew(nil, geo)
+	switch gg := geo.(type) {
+	case geom.Polygon:
+		mply = geom.MultiPolygon{[][][2]float64(gg)}
+	case geom.MultiPolygon:
+		mply = gg
+	default:
+		return nil, nil, nil, fmt.Errorf("Only support Polygoner and MultiPolygon, got type %T", geo)
+	}
+
+	segments, err := makevalid.Destructure(ctx, clipbox, &mply)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if len(segments) == 0 {
+		log.Printf("# clipped the multipolygon out of existance.")
+		return nil, nil, nil, err
+	}
+
+	/* Let's draw out all the triangles. which means we have to do the triangulation twice. */
+	allTriangles, err := makevalid.TriangulateGeometry(ctx, segments)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for i, triangle := range allTriangles {
+		if hm.LabelFor(triangle.Center()) == planar.Outside {
+			outsideTriangles = append(outsideTriangles, allTriangles[i])
+		} else {
+			insideTriangles = append(insideTriangles, allTriangles[i])
+		}
+	}
+
+	fixedMultiPolygon := walker.MultiPolygon(ctx, insideTriangles)
+	return fixedMultiPolygon, outsideTriangles, insideTriangles, nil
+}
+
+func (dfn drawFilename) DrawFeature(pname, name string, gid int) func(f *provider.Feature) error {
+
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
-	for _, name := range layers {
-		count := 0
-		err := tiler.TileFeatures(ctx, name, slippyTile, func(f *provider.Feature) error {
-			if gid != -1 && f.ID != uint64(gid) {
-				// Skip the feature.
-				return nil
-			}
-			count++
-			cursor := mvt.NewCursor(ttile)
+	cursor := mvt.NewCursor(ttile)
 
-			// Scale
-			g, err := cursor.ProjectGeometry(f.Geometry)
-			if err != nil {
-				return err
-			}
-			tg, err := convert.ToTegola(g)
-			if err != nil {
-				return err
-			}
+	pbb, err := ttile.PixelBufferedBounds()
+	if err != nil {
+		panic(err)
+	}
 
-			// Simplify
-			sg, err := mvt.SimplifyGeometryGeom(ctx, g, ttile.ZEpislon())
-			if err != nil {
-				return err
-			}
-			tsg, err := convert.ToTegola(sg)
-			if err != nil {
-				return err
-			}
+	count := 0
+	clipbox := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
-			pbb, err := ttile.PixelBufferedBounds()
-			if err != nil {
-				return err
-			}
-			// Clip and validate
-			ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
-			vg, err := validate.CleanGeometryGeom(ctx, sg, ext)
-			if err != nil {
-				return err
-			}
-
-			tvg, err := convert.ToTegola(vg)
-			if err != nil {
-				return err
-			}
-
-			// Draw each of the steps.
-			ffname, file, err := dfn.createFile(pname, name, gid, count)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			log.Printf("Writing to file: %v\n", ffname)
-			mm := svg.MinMax{0, 0, 4096, 4096}
-			mm.OfGeometry(tg)
-			canvas := &svg.Canvas{
-				Board:  mm,
-				Region: svg.MinMax{0, 0, 4096, 4096},
-			}
-			canvas.Init(file, 1440, 900, false)
-
-			canvas.DrawRegion(true)
-
-			canvas.Commentf("MinMax: %v\n", mm)
-
-			log.Println("\tDrawing original version.")
-			canvas.DrawGeometry(tg, fmt.Sprintf("%v_scaled", gid), "fill-rule:evenodd; fill:yellow;opacity:1", "fill:black", false)
-
-			log.Println("\tDrawing simplified version.")
-			canvas.DrawGeometry(tsg, fmt.Sprintf("%v_simplifed", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
-
-			log.Println("\tDrawing clipped version.")
-			canvas.DrawGeometry(tvg, fmt.Sprintf("clipped_%v", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
-
-			// Flush the canvas.
-			canvas.End()
-
+	return func(f *provider.Feature) error {
+		if gid != -1 && f.ID != uint64(gid) {
+			// Skip the feature.
 			return nil
-		})
+		}
+
+		switch f.Geometry.(type) {
+		case geom.Polygoner:
+		case geom.MultiPolygoner:
+		default:
+			panic(fmt.Sprintf("Only support Polygoner and MultiPolygon, got type %T for %v", f.Geometry, f.ID))
+		}
+
+		// Scale
+		g, err := cursor.ProjectGeometry(f.Geometry)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("// Number of geometries drawn for %v.%v : %v\n", pname, name, count)
+
+		// Simplify
+		sg, err := mvt.SimplifyGeometryGeom(context.Background(), g, ttile.ZEpislon())
+		if err != nil {
+			return err
+		}
+
+		count++
+		finalgeom, oTriangles, iTriangles, err := GetParts(clipbox, sg)
+		if err != nil {
+			return err
+		}
+
+		ffname, writer, err := dfn.createFile(pname, name, gid, count)
+		if err != nil {
+			return err
+		}
+		log.Printf("Writing to file: %v\n", ffname)
+
+		// Draw out the svg file.
+		canvas := svg.New(writer)
+		canvas.Startraw()
+		DrawParts(canvas, clipbox, sg, finalgeom, oTriangles, iTriangles)
+		canvas.End()
+		writer.Close()
+
+		return nil
 	}
-	return nil
 }

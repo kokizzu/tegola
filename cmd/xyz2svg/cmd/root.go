@@ -32,6 +32,9 @@ var (
 	Z, X, Y uint
 	// Providers that were in the config file.
 	Providers map[string]provider.Tiler
+
+	DrawingScale float64
+	DrawingStart float64
 )
 
 func init() {
@@ -40,8 +43,11 @@ func init() {
 	Root.PersistentFlags().StringVarP(&zxystr, "tile", "t", "", "tile in z/x/y format")
 	Root.PersistentFlags().StringVarP(&providerString, "provider", "p", "", "provider in the format: “$provider.$layer”")
 	Root.PersistentFlags().IntVarP(&gid, "gid", "g", -1, "the feature to select.")
+	Root.PersistentFlags().Float64VarP(&DrawingScale, "scale", "s", 100, "How much to scale the features values by.")
+	Root.PersistentFlags().Float64VarP(&DrawingStart, "start", "", 100, "Where to start drawing feature at.")
 
 	Root.AddCommand(drawCmd)
+	Root.AddCommand(wkbCmd)
 }
 
 //parseTileString will convert a z/x/y formatted string into a the three components.

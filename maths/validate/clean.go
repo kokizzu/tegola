@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/clip"
+	"github.com/go-spatial/geom/planar/makevalid"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
-	"github.com/go-spatial/geom/planar/makevalid/tegola"
 )
 
 func CleanGeometryGeom(ctx context.Context, g geom.Geometry, extent *geom.Extent) (geo geom.Geometry, err error) {
@@ -19,7 +19,7 @@ func CleanGeometryGeom(ctx context.Context, g geom.Geometry, extent *geom.Extent
 		return nil, err
 	}
 
-	mkv := tegola.Makevalid{
+	mkv := makevalid.Makevalid{
 		Hitmap:  hm,
 		Clipper: clip.Default,
 	}

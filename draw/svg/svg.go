@@ -3,12 +3,8 @@ package svg
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
-	"log"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
 )
 
 const DefaultSpacing = 10
@@ -86,26 +82,19 @@ func (canvas *Canvas) DrawRegion(withGrid bool) {
 	canvas.Gend()
 }
 
-func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, pointStyle string, drawPoints bool) int {
+/*
+func (canvas *Canvas) DrawPolygon(p geom.Polygon, id string, style string) int {
 	var points []maths.Pt
 	canvas.Group(`id="`+id+`"`, `style="opacity:1"`)
 	canvas.Gid("polygon_path")
 	path := ""
 	pointCount := 0
-	for _, l := range p.Sublines() {
-		pts := l.Subpoints()
-		if len(pts) == 0 {
-			continue
-		}
-		idx := len(pts)
-		// If the first and last point is the same skipp the last point.
-		if pts[0].X() == pts[idx-1].X() && pts[0].Y() == pts[idx-1].Y() {
-			idx = len(pts) - 1
-		}
+	for _, l := range p {
+		idx := len(l)
 		if idx <= 0 {
 			continue
 		}
-		for i, pt := range pts[:idx] {
+		for i, pt := range l {
 			points = append(points, maths.Pt{X: pt.X(), Y: pt.Y()})
 			if i == 0 {
 				path += "M "
@@ -125,48 +114,29 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 	return pointCount
 }
 
-func (canvas *Canvas) DrawMultiPolygon(mp tegola.MultiPolygon, id string, style string, pointStyle string, drawPoints bool) int {
+func (canvas *Canvas) DrawMultiPolygon(mp geom.MultiPolygon, id string, style string) int {
 	canvas.Gid(id)
 	count := 0
 	for i, p := range mp.Polygons() {
-		count += canvas.DrawPolygon(p, fmt.Sprintf("%v_mp_%v", id, i), style, pointStyle, drawPoints)
+		count += canvas.DrawPolygon(geom.Polygon(p), fmt.Sprintf("%v_mp_%v", id, i), style)
 	}
 	canvas.Gend()
 	return count
 }
 
-func (canvas *Canvas) DrawLine(l tegola.LineString, id string, style string, pointStyle string, drawPoints bool) {
-	var points []maths.Pt
-	pts := l.Subpoints()
+func (canvas *Canvas) DrawLine(l geom.LineString, id string, style string) {
 
 	canvas.Gid(id)
 	path := ""
-	canvas.Gid(id + "_line_path")
-	for i, pt := range pts {
-		points = append(points, maths.Pt{X: pt.X(), Y: pt.Y()})
+	for i, pt := range l {
 		if i == 0 {
 			path += "M "
 		} else {
 			path += "L "
 		}
-		path += fmt.Sprintf("%v %v ", pt.X(), pt.Y())
+		path += fmt.Sprintf("%v %v ", pt[0], pt[1])
 	}
 	canvas.Path(path, style)
-	canvas.Gend()
-	if drawPoints {
-		canvas.Gid(id + "_points")
-		for _, pt := range points {
-			x, y := int(pt.X), int(pt.Y)
-			if pointStyle == "" {
-				pointStyle = "fill:black"
-			}
-			canvas.Circle(x, y, 1, pointStyle)
-			canvas.Group(fmt.Sprintf(`id="pt%v_%v" style="text-anchor:middle;font-size:8;fill:white;stroke:black;opacity:0.7"`, x, y))
-			canvas.Text(x, y+5, fmt.Sprintf("(%v %v)", x, y))
-			canvas.Gend()
-		}
-		canvas.Gend()
-	}
 	canvas.Gend()
 }
 
@@ -193,10 +163,10 @@ func (canvas *Canvas) DrawMathPoints(pts []maths.Pt, s ...string) {
 	canvas.Path(path, s...)
 }
 
-func (canvas *Canvas) DrawMultiLine(ml tegola.MultiLine, id string, style string, pointStyle string, drawPoints bool) {
+func (canvas *Canvas) DrawMultiLine(ml geom.MultiLine, id string, style string) {
 	canvas.Gid(id)
-	for i, l := range ml.Lines() {
-		canvas.DrawLine(l, fmt.Sprintf("%v_%v", id, i), style, pointStyle, drawPoints)
+	for i, l := range ml.LineStrings() {
+		canvas.DrawLine(l, fmt.Sprintf("%v_%v", id, i), style)
 	}
 	canvas.Gend()
 }
@@ -204,19 +174,19 @@ func (canvas *Canvas) DrawMultiLine(ml tegola.MultiLine, id string, style string
 func (canvas *Canvas) DrawGeometry(geo tegola.Geometry, id string, style string, pointStyle string, drawPoints bool) int {
 	count := 0
 	switch g := geo.(type) {
-	case tegola.MultiLine:
-		canvas.DrawMultiLine(g, "multiline_"+id, style, pointStyle, drawPoints)
-	case tegola.MultiPolygon:
-		count += canvas.DrawMultiPolygon(g, "multipolygon_"+id, style, pointStyle, drawPoints)
-	case tegola.Polygon:
+	case geom.MultiLine:
+		canvas.DrawMultiLine(g, "multiline_"+id, style)
+	case geom.MultiPolygon:
+		count += canvas.DrawMultiPolygon(g, "multipolygon_"+id, style, pointStyle)
+	case geom.Polygon:
 		count += canvas.DrawPolygon(g, "polygon_"+id, style, pointStyle, drawPoints)
-	case tegola.LineString:
-		canvas.DrawLine(g, "line_"+id, style, pointStyle, drawPoints)
-	case tegola.Point:
+	case geom.LineString:
+		canvas.DrawLine(g, "line_"+id, style)
+	case geom.Point:
 		canvas.Gid("point_" + id)
-		canvas.DrawPoint(int(g.X()), int(g.Y()), pointStyle)
+		canvas.DrawPoint(int(g[0]), int(g[1]), pointStyle)
 		canvas.Gend()
-	case tegola.MultiPoint:
+	case geom.MultiPoint:
 		canvas.Gid("multipoint_" + id)
 		for i, p := range g.Points() {
 			canvas.Gid(fmt.Sprintf("mp_%v", i))
@@ -253,3 +223,4 @@ func (canvas *Canvas) GroupFn(attr []string, fn func(c *Canvas)) {
 	fn(canvas)
 	canvas.SVG.Gend()
 }
+*/
