@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	svg "github.com/ajstarks/svgo"
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/planar/makevalid/walker"
+	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cmd/internal/register"
@@ -244,7 +244,8 @@ func GetParts(clipbox *geom.Extent, geo geom.Geometry) (final geom.Geometry, out
 	}
 
 	/* Let's draw out all the triangles. which means we have to do the triangulation twice. */
-	allTriangles, err := makevalid.TriangulateGeometry(ctx, segments)
+	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segments)
+	allTriangles, err := builder.Triangles(false)
 	if err != nil {
 		return nil, nil, nil, err
 	}

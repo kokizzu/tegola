@@ -43,7 +43,7 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 
 	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
-		log.Error("error decoding geometry: %v", err)
+		log.Errorf("error decoding geometry: %v", err)
 		return h, nil, err
 	}
 
@@ -177,7 +177,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				}
 
 			case pLayer.geomFieldname:
-				log.Debugf("extracting geopackage geometry header.", vals[i])
+				log.Debug("extracting geopackage geometry header.", vals[i])
 
 				geomData, ok := vals[i].([]byte)
 				if !ok {

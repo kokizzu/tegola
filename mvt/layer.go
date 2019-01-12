@@ -4,12 +4,51 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 
 	"context"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
+
+var (
+	simplifyGeometries    = true
+	simplificationMaxZoom = 10
+)
+
+func init() {
+	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
+	if strings.Contains(options, "dontsimplifygeo") {
+		simplifyGeometries = false
+		log.Println("simplification of geometries is off")
+	}
+
+	if strings.Contains(options, "simplifymaxzoom=") {
+		idx := strings.Index(options, "simplifymaxzoom=")
+		idx += 16
+		eidx := strings.IndexAny(options[idx:], ",.\t \n")
+
+		if eidx == -1 {
+			eidx = len(options)
+		} else {
+			eidx += idx
+		}
+
+		i, err := strconv.Atoi(options[idx:eidx])
+		if err != nil {
+			log.Printf("did not understand the value (%v) for SimplifyMaxZoom. using default (%v).", options[idx:eidx], simplificationMaxZoom)
+			return
+		}
+
+		simplificationMaxZoom = int(i + 1)
+
+		log.Printf("setting SimplifyMaxZoom to %v", int(i))
+	}
+}
 
 // Layer describes a layer in a tile. Each layer can have multiple features.
 type Layer struct {
@@ -117,35 +156,16 @@ func (l *Layer) Features() (f []Feature) {
 	return f
 }
 
-// AddFeatures will add one or more Features to the Layer, if a features ID is a the same as
-// Any already in the Layer, it will ignore those features.
-// If the id fields is nil, the feature will always be added.
-func (l *Layer) AddFeatures(features ...Feature) (skipped bool) {
-	b := make([]Feature, len(l.features), len(l.features)+len(features))
+// AddFeatures will add one or more Features to the Layer
+// per the spec features SHOULD have unique ids but it's not required
+func (l *Layer) AddFeatures(features ...Feature) {
+	// pre allocate memory
+	b := make([]Feature, len(l.features)+len(features))
+
 	copy(b, l.features)
+	copy(b[len(l.features):], features)
+
 	l.features = b
-
-FEATURES_LOOP:
-	for _, f := range features {
-		if f.ID == nil {
-			l.features = append(l.features, f)
-			continue
-		}
-		for _, cf := range l.features {
-			if cf.ID == nil {
-				continue
-			}
-			// We matched, we skip
-			if *cf.ID == *f.ID {
-				skipped = true
-				continue FEATURES_LOOP
-			}
-		}
-		// There were no matches, let's add it to our list.
-		l.features = append(l.features, f)
-	}
-
-	return skipped
 }
 
 // RemoveFeature allows you to remove one or more features, with the provided indexes.

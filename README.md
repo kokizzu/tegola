@@ -6,7 +6,7 @@
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/go-spatial/tegola/blob/master/LICENSE.md)
 
-Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) leveraging PostGIS as the data provider.
+Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for PostGIS and GeoPackage data providers.
 
 ## Features
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
@@ -42,8 +42,7 @@ Use "tegola [command] --help" for more information about a command.
 
 ## Running tegola as a vector tile server
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
-2. After the download you will need to make the binary executable. The binary, will be name `tegola_$OS_$ARCH`, to follow along with the instructions make sure to rename it to `tegola`.
-2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
+2. Setup your config file and run. Dy default tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
 ./tegola serve --config=/path/to/config.toml
@@ -108,6 +107,10 @@ Under the `maps` section, map layers are associated with data provider layers an
 [webserver]
 port = ":9090"              # port to bind the web server to. defaults ":8080"
 
+	[webserver.headers]
+	Access-Control-Allow-Origin = "*"
+	Cache-Control = "no-cache, no-store, must-revalidate"
+
 [cache]                     # configure a tile cache
 type = "file"               # a file cache will cache to the local file system
 basepath = "/tmp/tegola"    # where to write the file cache
@@ -127,14 +130,14 @@ ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (option
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	tablename = "gis.zoning_base_3857"  # sql or tablename are required
 	geometry_fieldname = "geom"         # geom field. default is geom
 	id_fieldname = "gid"                # geom id field. default is gid
 	srid = 4326                         # the srid of table's geo data. Defaults to WebMercator (3857)
 
 	[[providers.layers]]
 	name = "roads"                      # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	tablename = "gis.zoning_base_3857"  # sql or tablename are required
 	geometry_fieldname = "geom"         # geom field. default is geom
 	geometry_type = "linestring"        # geometry type. if not set, tables are inspected at startup to try and infer the gemetry type
 	id_fieldname = "gid"                # geom id field. default is gid
@@ -147,6 +150,14 @@ ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (option
 	# Custom sql to be used for this layer. Note: that the geometery field is wraped
 	# in a ST_AsBinary() and the use of the !BBOX! token
 	sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
+
+	[[providers.layers]]
+	name = "buildings"                  # will be encoded as the layer name in the tile
+	geometry_fieldname = "geom"         # geom field. default is geom
+	id_fieldname = "gid"                # geom id field. default is gid
+	# Custom sql to be used for this layer as a sub query. ST_AsBinary and
+	# !BBOX! filter are applied automatically.
+	sql = "(SELECT gid, geom, type FROM buildings WHERE scalerank = !ZOOM! LIMIT 1000) AS sub"
 
 # maps are made up of layers
 [[maps]]

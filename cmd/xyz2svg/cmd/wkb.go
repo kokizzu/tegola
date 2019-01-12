@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	svg "github.com/ajstarks/svgo"
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
-	"github.com/spf13/cobra"
 )
 
 var wkbCmd = &cobra.Command{

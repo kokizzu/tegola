@@ -55,8 +55,9 @@ In order to access the Lambda function publicly and API gateway will need to be 
   - Use Default Timeout: Un-check and set to 29 seconds. This is currently the max that API gateway allows.
   - Click "Save". A dialog box with pop up asking to allow the API Gateway permission to the selected Lambda function. Click "OK".
 - On the left, under the APIs section, locate "Settings" under the configured API.
+  - Under "Content Encoding" check the box to enable and set the value to 0. This is important as tegola will return tiles in gzip encoded. Without this checked the content encoding will be improperly handled. 
   - Under "Binary Media Types" click "Add Binary Media Type".
-  - Input "*/*" as the value. This is necessary as tegola returns protocol buffers, which are a binary format. Without this configuration API gateway will return the vector tile payloads as base64 encoded strings.
+  - Input `*/*` as the value. This is necessary as tegola returns protocol buffers, which are a binary format. Without this configuration API gateway will return the vector tile payloads as base64 encoded strings.
   - Click "Save Changes".
 - Click on "Resources" under the APIs section for the configured API. 
   - Click "Actions" under the resources section. Under the "API Actions" section, click "Deploy API".

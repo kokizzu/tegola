@@ -59,6 +59,5 @@ func (t *Tile) VTile(ctx context.Context, tile *tegola.Tile) (vt *vectorTile.Til
 
 		vt.Layers = append(vt.Layers, vtl)
 	}
-
 	return vt, nil
 }
