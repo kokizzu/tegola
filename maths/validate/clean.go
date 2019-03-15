@@ -14,7 +14,7 @@ func CleanGeometryGeom(ctx context.Context, g geom.Geometry, extent *geom.Extent
 		return nil, nil
 	}
 
-	hm, err := hitmap.New(nil, g)
+	hm, err := hitmap.New(ctx,nil, g)
 	if err != nil {
 		return nil, err
 	}

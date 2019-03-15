@@ -2,6 +2,7 @@ package convert
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
@@ -22,6 +23,7 @@ func ToGeom(g tegola.Geometry) (geom.Geometry, error) {
 	}
 	switch geo := g.(type) {
 	default:
+		log.Printf("Unknown geom: %T", g)
 		return nil, ErrUnknownGeometryType{Geom: geo}
 	case tegola.Point:
 		return geom.Point{geo.X(), geo.Y()}, nil
@@ -80,7 +82,7 @@ func ToGeom(g tegola.Geometry) (geom.Geometry, error) {
 				}
 			}
 		}
-		return mp, nil
+		return &mp, nil
 	case tegola.Collection:
 		geometries := geo.Geometries()
 		var cl = make(geom.Collection, len(geometries))
