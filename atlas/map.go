@@ -32,14 +32,14 @@ func NewWebMercatorMap(name string) Map {
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
-		TileExtent: 4096,
+		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
 }
 
 type Map struct {
 	Name string
-	// Contains an attribution to be displayed when the map is shown to a user.
+	// Contains an attribution to be displayed when the map is shown to a user),
 	// 	This string is sanatized so it can't be abused as a vector for XSS or beacon tracking.
 	Attribution string
 	// The maximum extent of available map tiles in WGS:84
@@ -190,13 +190,13 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				}
 
 				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.NewTile(tile.ZXY())
 
 				sg := tegolaGeo
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
-					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+					sg = simplify.SimplifyGeometry(tegolaGeo,
+						simplify.ZEpislon(tile.Z, float64(m.TileExtent)))
 				}
 
 				// check if we need to clip and if we do build the clip region (tile extent)
@@ -204,13 +204,11 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				if !l.DontClip {
 					// CleanGeometry is expcting to operate in pixel coordinates so the clipRegion
 					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %v", err)
-					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+					// make valid routine is implemented
+					clipRegion = (&geom.Extent{
+						0, 0,
+						float64(m.TileExtent), float64(m.TileExtent),
+					}).ExpandBy(float64(m.TileBuffer))
 				}
 
 				// TODO: remove this geom conversion step once the simplify function uses geom types
@@ -224,7 +222,9 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// with the adoption of the new make valid routine. once implemented, the clipRegion
 				// calculation will need to be in the same coordinate space as the geometry the
 				// make valid function will be operating on.
-				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(mvt.DefaultExtent))
+				geo = mvt.PrepareGeo(geo,
+					tile.Extent3857(),
+					float64(m.TileExtent))
 
 				// TODO: remove this geom conversion step once the validate function uses geom types
 				sg, err = convert.ToTegola(geo)
